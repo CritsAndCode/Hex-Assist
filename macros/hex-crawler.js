@@ -20,6 +20,11 @@ if (gridType !== 4 && gridType !== 2) {
 const playerMarker = currentScene.data.tokens.find(a => a.name === game.settings.get("Hex-Assist", "tokenName"));
 const locationMarker = currentScene.data.tokens.find(a => a.name === game.settings.get("Hex-Assist", "actualName"));
 const directionMarker = currentScene.data.tokens.find(a => a.name === game.settings.get("Hex-Assist", "direction"));
+const travelTypes = {
+    onFoot: 'on-foot',
+    canoe: 'canoe',
+    ship: 'ship',
+}
 
 let pX = playerMarker.x;
 let pY = playerMarker.y;
@@ -68,108 +73,107 @@ formContent += `<option value="Southeast">Southeast</option><option value="South
 if (gridType === 2) {
     formContent += `<option value="West">West</option>`;
 }
-formContent += `</select></div><div class="form-group"><label>Travel Type:</label><select id="travel-type" name="travel-type"><option value="on-foot">On Foot</option><option value="canoe">By Canoe</option></select></div></form>`;
+formContent += `</select></div><div class="form-group"><label>Travel Type:</label><select id="travel-type" name="travel-type"><option value="${travelTypes.onFoot}">On Foot</option><option value="${travelTypes.canoe}">By Canoe</option><option value="${travelTypes.ship}">By Ship</option></select></div></form>`;
 
 let pace = 'none';
-new Dialog({
-    title: `Hex Crawl Helper`,
-    content: formContent,
-    buttons: {
-        slow: {
-            icon: "<i class='fas fa-user-ninja'></i>",
-            label: `Slow Pace`,
-            callback: () => pace = 'slow'
-        },
-        average: {
-            icon: "<i class='fas fa-hiking'></i>",
-            label: `Average Pace`,
-            callback: () => pace = 'average'
-        },
-        fast: {
-            icon: "<i class='fas fa-running'></i>",
-            label: `Fast Pace`,
-            callback: () => pace = 'fast'
-        }
-    },
-    default: "average",
-    close: html => {
-        let hexType = html.find('[name="hex-type"]')[0].value;
-        let travelType = html.find('[name="travel-type"]')[0].value;
-        let playerDirection = html.find('[name="travel-direction"]')[0].value;
-        if (playerDirection === "Marker") {
-            if (dY < pY && (dX === pX || (dX > pX - range && dX < pX + range))) {
-                if (gridType === 2) {
-                    playerDirection = ["Northeast", "Northwest"][Math.floor(Math.random() * 2)];
-                }
-                if (gridType === 4) {
-                    playerDirection = "North";
-                }
-            } else if (dY > pY && (dX === pX || (dX > pX - range && dX < pX + range))) {
-                if (gridType === 2) {
-                    playerDirection = ["Southeast", "Southwest"][Math.floor(Math.random() * 2)];
-                }
-                if (gridType === 4) {
-                    playerDirection = "South";
-                }
-            } else if (dX < pX && (dX === pX || (dY > pY - range && dY < pY + range))) {
-                if (gridType === 2) {
-                    playerDirection = "West";
-                }
-                if (gridType === 4) {
-                    playerDirection = ["Northwest", "Southwest"][Math.floor(Math.random() * 2)];
-                }
-            } else if (dX > pX && (dX === pX || (dY > pY - range && dY < pY + range))) {
-                if (gridType === 2) {
-                    playerDirection = "East";
-                }
-                if (gridType === 4) {
-                    playerDirection = ["Northeast", "Southeast"][Math.floor(Math.random() * 2)];
-                }
-            } else if (dX < pX && dY < pY) {
-                playerDirection = "Northwest";
-            } else if (dX > pX && dY < pY) {
-                playerDirection = "Northeast";
-            } else if (dX < pX && dY > pY) {
-                playerDirection = "Southwest";
-            } else if (dX > pX && dY > pY) {
-                playerDirection = "Southeast";
+
+const travel = (hexType, travelType, playerDirection, html) => {
+    if (playerDirection === "Marker") {
+        if (dY < pY && (dX === pX || (dX > pX - range && dX < pX + range))) {
+            if (gridType === 2) {
+                playerDirection = ["Northeast", "Northwest"][Math.floor(Math.random() * 2)];
             }
+            if (gridType === 4) {
+                playerDirection = "North";
+            }
+        } else if (dY > pY && (dX === pX || (dX > pX - range && dX < pX + range))) {
+            if (gridType === 2) {
+                playerDirection = ["Southeast", "Southwest"][Math.floor(Math.random() * 2)];
+            }
+            if (gridType === 4) {
+                playerDirection = "South";
+            }
+        } else if (dX < pX && (dX === pX || (dY > pY - range && dY < pY + range))) {
+            if (gridType === 2) {
+                playerDirection = "West";
+            }
+            if (gridType === 4) {
+                playerDirection = ["Northwest", "Southwest"][Math.floor(Math.random() * 2)];
+            }
+        } else if (dX > pX && (dX === pX || (dY > pY - range && dY < pY + range))) {
+            if (gridType === 2) {
+                playerDirection = "East";
+            }
+            if (gridType === 4) {
+                playerDirection = ["Northeast", "Southeast"][Math.floor(Math.random() * 2)];
+            }
+        } else if (dX < pX && dY < pY) {
+            playerDirection = "Northwest";
+        } else if (dX > pX && dY < pY) {
+            playerDirection = "Northeast";
+        } else if (dX < pX && dY > pY) {
+            playerDirection = "Southwest";
+        } else if (dX > pX && dY > pY) {
+            playerDirection = "Southeast";
         }
-        let directions = ["North", "Northeast", "Northwest", "South", "Southeast", "Southwest"];
-        if (gridType === 2) {
-            directions = ["West", "Northeast", "Northwest", "East", "Southeast", "Southwest"];
-        }
-        const encounterTable = game.tables.entities.find(t => t.name === hexType);
-        const weatherTable = game.tables.entities.find(t => t.name === game.settings.get("Hex-Assist", "weather"));
-        let weatherRoll = "";
-        if (weatherTable) {
-            weatherRoll = weatherTable.roll().results[0].text;
+    }
+    let directions = ["North", "Northeast", "Northwest", "South", "Southeast", "Southwest"];
+    if (gridType === 2) {
+        directions = ["West", "Northeast", "Northwest", "East", "Southeast", "Southwest"];
+    }
+    const encounterTable = game.tables.entities.find(t => t.name === hexType);
+    const weatherTable = game.tables.entities.find(t => t.name === game.settings.get("Hex-Assist", "weather"));
+    let weatherRoll = "";
+    if (weatherTable) {
+        weatherRoll = weatherTable.roll().results[0].text;
+    } else {
+        weatherRoll = ["Light Rain", "Heavy Rain", "Tropical Storm"][Math.floor(Math.random() * 3)]
+    }
+    let lostDirection = directions[Math.floor(Math.random() * directions.length)];
+    let msgContent = '<strong>Weather</strong> ' + weatherRoll + '<br/><br/>';
+    let navigator = defaultNavigator;
+    if (!navigator) {
+        navigator = Actors.instance.get(canvas.tokens.controlled[0].data.actorId);
+    }
+    if (!navigator) {
+        return;
+    }
+    let wis = navigator.data.data.abilities.wis.mod;
+    let survivalDC = 10;
+    let survival = new Roll(`1d20`).roll().total + wis;
+    let survival2 = new Roll(`1d20`).roll().total + wis;
+    if (weatherRoll.indexOf('Tropical storm') > -1 && survival > survival2) {
+        survival = survival2;
+    }
+    let slowPace = new Roll(`1d4`).roll().total;
+    let fastPace = new Roll(`1d2`).roll().total;
+    let sailPace = new Roll(`1d2`).roll().total;
+    let hexesMoved = 1;
+    let encounter = '';
+    let hexText = 'hexes';
+
+    if (travelType === travelTypes.ship) {
+        if (pace === 'slow') {
+            hexText = 'hex';
+            msgContent += '<strong>Close Hauled:</strong> Sailing into the wind.<br/><br/><strong>Party can move:</strong> ' + hexesMoved + ' ' + hexText + '.<br/><br/>';
+            console.log(hexesMoved);
+        } else if (pace === 'average') {
+            if (sailPace !== 1)
+                hexesMoved++;
+            if (hexesMoved === 1)
+                hexText = 'hex';
+            msgContent += '<strong>Beam Reach:</strong> Sailing at a right angle to the wind.<br/><br/><strong>Party can move:</strong> ' + hexesMoved + ' ' + hexText + '.<br/><br/>';
+            console.log(hexesMoved);
+        } else if (pace === 'fast') {
+            hexesMoved += sailPace;
+            msgContent += '<strong>Running:</strong> Sailing with the wind.<br/><br/><strong>Party can move:</strong> ' + hexesMoved + ' ' + hexText + '.<br/><br/>';
+            console.log(hexesMoved);
         } else {
-            weatherRoll = ["Light Rain", "Heavy Rain", "Tropical Storm"][Math.floor(Math.random() * 3)]
-        }
-        let lostDirection = directions[Math.floor(Math.random() * directions.length)];
-        let msgContent = '<strong>Weather</strong> ' + weatherRoll + '<br/><br/>';
-        let navigator = defaultNavigator;
-        if (!navigator) {
-            navigator = Actors.instance.get(canvas.tokens.controlled[0].data.actorId);
-        }
-        if (!navigator) {
             return;
         }
-        let wis = navigator.data.data.abilities.wis.mod;
-        let survivalDC = 10;
-        let survival = new Roll(`1d20`).roll().total + wis;
-        let survival2 = new Roll(`1d20`).roll().total + wis;
-        if (weatherRoll.indexOf('Tropical storm') > -1 && survival > survival2) {
-            survival = survival2;
-        }
-        let slowPace = new Roll(`1d4`).roll().total;
-        let fastPace = new Roll(`1d2`).roll().total;
-        let hexesMoved = 1;
-        let encounter = '';
-        let hexText = 'hexes';
+    } else {
 
-        if (travelType === 'canoe') {
+        if (travelType === travelTypes.canoe) {
             hexesMoved++;
         }
 
@@ -194,226 +198,294 @@ new Dialog({
         } else {
             return;
         }
+    }
 
-        if (Number(encounterTable.data.description)) {
-            survivalDC = Number(encounterTable.data.description);
-        }
+    if (Number(encounterTable.data.description)) {
+        survivalDC = Number(encounterTable.data.description);
+    }
 
-        if (survival < survivalDC) {
-            msgContent += '<strong>Party is Lost:</strong> Move actual location ' + hexesMoved + ' ' + hexText + ' to the ' + lostDirection + '<br/><br/>';
-            if (locationMarker) {
-                switch (lostDirection) {
-                    case 'South':
-                        lX = locationMarker.x;
-                        lY = locationMarker.y + (vertical * hexesMoved);
-                        break;
-
-                    case 'Southwest':
-                        lX = locationMarker.x - (diagHorizontal * hexesMoved);
-                        lY = locationMarker.y + (diagVertical * hexesMoved);
-                        break;
-
-                    case 'Southeast':
-                        lX = locationMarker.x + (diagHorizontal * hexesMoved);
-                        lY = locationMarker.y + (diagVertical * hexesMoved);
-                        break;
-
-                    case 'North':
-                        lX = locationMarker.x;
-                        lY = locationMarker.y - (vertical * hexesMoved);
-                        break;
-
-                    case 'Northwest':
-                        lX = locationMarker.x - (diagHorizontal * hexesMoved);
-                        lY = locationMarker.y - (diagVertical * hexesMoved);
-                        break;
-
-                    case 'Northeast':
-                        lX = locationMarker.x + (diagHorizontal * hexesMoved);
-                        lY = locationMarker.y - (diagVertical * hexesMoved);
-                        break;
-
-                    case 'East':
-                        lX = locationMarker.x + (horizontal * hexesMoved);
-                        lY = locationMarker.y;
-                        break;
-
-                    case 'West':
-                        lX = locationMarker.x - (horizontal * hexesMoved);
-                        lY = locationMarker.y;
-                        break;
-
-                    default:
-                        break;
-                }
-            }
-            if (playerMarker) {
-                switch (playerDirection) {
-                    case 'South':
-                        pX = playerMarker.x;
-                        pY = playerMarker.y + (vertical * hexesMoved);
-                        break;
-
-                    case 'Southwest':
-                        pX = playerMarker.x - (diagHorizontal * hexesMoved);
-                        pY = playerMarker.y + (diagVertical * hexesMoved);
-                        break;
-
-                    case 'Southeast':
-                        pX = playerMarker.x + (diagHorizontal * hexesMoved);
-                        pY = playerMarker.y + (diagVertical * hexesMoved);
-                        break;
-
-                    case 'North':
-                        pX = playerMarker.x;
-                        pY = playerMarker.y - (vertical * hexesMoved);
-                        break;
-
-                    case 'Northwest':
-                        pX = playerMarker.x - (diagHorizontal * hexesMoved);
-                        pY = playerMarker.y - (diagVertical * hexesMoved);
-                        break;
-
-                    case 'Northeast':
-                        pX = playerMarker.x + (diagHorizontal * hexesMoved);
-                        pY = playerMarker.y - (diagVertical * hexesMoved);
-                        break;
-
-                    case 'East':
-                        pX = playerMarker.x + (horizontal * hexesMoved);
-                        pY = playerMarker.y;
-                        break;
-
-                    case 'West':
-                        pX = playerMarker.x - (horizontal * hexesMoved);
-                        pY = playerMarker.y;
-                        break;
-
-                    default:
-                        break;
-                }
-            }
-        } else {
-            if (playerMarker && locationMarker) {
-
-                switch (playerDirection) {
-                    case 'South':
-                        pX = lX = locationMarker.x;
-                        pY = lY = locationMarker.y + (vertical * hexesMoved);
-                        break;
-
-                    case 'Southwest':
-                        pX = lX = locationMarker.x - (diagHorizontal * hexesMoved);
-                        pY = lY = locationMarker.y + (diagVertical * hexesMoved);
-                        break;
-
-                    case 'Southeast':
-                        pX = lX = locationMarker.x + (diagHorizontal * hexesMoved);
-                        pY = lY = locationMarker.y + (diagVertical * hexesMoved);
-                        break;
-
-                    case 'North':
-                        pX = lX = locationMarker.x;
-                        pY = lY = locationMarker.y - (vertical * hexesMoved);
-                        break;
-
-                    case 'Northwest':
-                        pX = lX = locationMarker.x - (diagHorizontal * hexesMoved);
-                        pY = lY = locationMarker.y - (diagVertical * hexesMoved);
-                        break;
-
-                    case 'Northeast':
-                        pX = lX = locationMarker.x + (diagHorizontal * hexesMoved);
-                        pY = lY = locationMarker.y - (diagVertical * hexesMoved);
-                        break;
-
-                    case 'East':
-                        pX = lX = locationMarker.x + (horizontal * hexesMoved);
-                        pY = lY = locationMarker.y;
-                        break;
-
-                    case 'West':
-                        pX = lX = locationMarker.x - (horizontal * hexesMoved);
-                        pY = lY = locationMarker.y;
-                        break;
-
-                    default:
-                        break;
-                }
-            }
-        }
-
-        if (playerMarker) {
-            updates.push({
-                _id: playerMarker._id,
-                x: pX,
-                y: pY
-            });
-        }
-
+    if (survival < survivalDC) {
+        msgContent += '<strong>Party is Lost:</strong> Move actual location ' + hexesMoved + ' ' + hexText + ' to the ' + lostDirection + '<br/><br/>';
         if (locationMarker) {
-            updates.push({
-                _id: locationMarker._id,
-                x: lX,
-                y: lY
-            });
-        }
+            switch (lostDirection) {
+                case 'South':
+                    lX = locationMarker.x;
+                    lY = locationMarker.y + (vertical * hexesMoved);
+                    break;
 
-        if (updates.length > 0) {
-            currentScene.updateEmbeddedEntity("Token", updates);
-        }
+                case 'Southwest':
+                    lX = locationMarker.x - (diagHorizontal * hexesMoved);
+                    lY = locationMarker.y + (diagVertical * hexesMoved);
+                    break;
 
-        msgContent += '<strong>Morning Encounter:</strong> ';
+                case 'Southeast':
+                    lX = locationMarker.x + (diagHorizontal * hexesMoved);
+                    lY = locationMarker.y + (diagVertical * hexesMoved);
+                    break;
 
-        if (new Roll(`1d20`).roll().total > 15) {
-            encounter = encounterTable.roll().results[0].text;
-            msgContent += encounter;
-            msgContent += '<br/><br/><strong>Afternoon Encounter:</strong> ';
-        } else {
-            msgContent += 'None.<br/><br/><strong>Afternoon Encounter:</strong> ';
-        }
+                case 'North':
+                    lX = locationMarker.x;
+                    lY = locationMarker.y - (vertical * hexesMoved);
+                    break;
 
-        if (new Roll(`1d20`).roll().total > 15) {
-            encounter = encounterTable.roll().results[0].text;
-            msgContent += encounter;
-            msgContent += '<br/><br/><strong>Evening Encounter:</strong> ';
-        } else {
-            msgContent += 'None.<br/><br/><strong>Evening Encounter:</strong> ';
-        }
+                case 'Northwest':
+                    lX = locationMarker.x - (diagHorizontal * hexesMoved);
+                    lY = locationMarker.y - (diagVertical * hexesMoved);
+                    break;
 
-        if (new Roll(`1d20`).roll().total > 15) {
-            encounter = encounterTable.roll().results[0].text;
-            msgContent += encounter;
-        } else {
-            msgContent += 'None.';
-        }
+                case 'Northeast':
+                    lX = locationMarker.x + (diagHorizontal * hexesMoved);
+                    lY = locationMarker.y - (diagVertical * hexesMoved);
+                    break;
 
-        if (game.settings.get("Hex-Assist", "journal")) {
-            let journal = game.journal.entities.find(j => j.data.name === "Encounters");
-            if (journal) {
-                journal.update({
-                    content: msgContent
-                })
-            } else {
-                JournalEntry.create({
-                    name: "Encounters",
-                    content: msgContent
-                });
-                journal = game.journal.entities.find(j => j.data.name === "Encounters");
+                case 'East':
+                    lX = locationMarker.x + (horizontal * hexesMoved);
+                    lY = locationMarker.y;
+                    break;
+
+                case 'West':
+                    lX = locationMarker.x - (horizontal * hexesMoved);
+                    lY = locationMarker.y;
+                    break;
+
+                default:
+                    break;
             }
-            journal.show();
-        } else {
-            let chatData = {
-                content: msgContent,
-                whisper: game.users.entities.filter(u => u.isGM).map(u => u._id)
-            };
-            ChatMessage.create(chatData, {});
         }
+        if (playerMarker) {
+            switch (playerDirection) {
+                case 'South':
+                    pX = playerMarker.x;
+                    pY = playerMarker.y + (vertical * hexesMoved);
+                    break;
 
-        if (game.modules.get("calendar-weather") && game.settings.get("Hex-Assist", "day")) {
-            game.Gametime.advanceTime({
-                days: 1
-            })
+                case 'Southwest':
+                    pX = playerMarker.x - (diagHorizontal * hexesMoved);
+                    pY = playerMarker.y + (diagVertical * hexesMoved);
+                    break;
+
+                case 'Southeast':
+                    pX = playerMarker.x + (diagHorizontal * hexesMoved);
+                    pY = playerMarker.y + (diagVertical * hexesMoved);
+                    break;
+
+                case 'North':
+                    pX = playerMarker.x;
+                    pY = playerMarker.y - (vertical * hexesMoved);
+                    break;
+
+                case 'Northwest':
+                    pX = playerMarker.x - (diagHorizontal * hexesMoved);
+                    pY = playerMarker.y - (diagVertical * hexesMoved);
+                    break;
+
+                case 'Northeast':
+                    pX = playerMarker.x + (diagHorizontal * hexesMoved);
+                    pY = playerMarker.y - (diagVertical * hexesMoved);
+                    break;
+
+                case 'East':
+                    pX = playerMarker.x + (horizontal * hexesMoved);
+                    pY = playerMarker.y;
+                    break;
+
+                case 'West':
+                    pX = playerMarker.x - (horizontal * hexesMoved);
+                    pY = playerMarker.y;
+                    break;
+
+                default:
+                    break;
+            }
+        }
+    } else {
+        if (playerMarker && locationMarker) {
+
+            switch (playerDirection) {
+                case 'South':
+                    pX = lX = locationMarker.x;
+                    pY = lY = locationMarker.y + (vertical * hexesMoved);
+                    break;
+
+                case 'Southwest':
+                    pX = lX = locationMarker.x - (diagHorizontal * hexesMoved);
+                    pY = lY = locationMarker.y + (diagVertical * hexesMoved);
+                    break;
+
+                case 'Southeast':
+                    pX = lX = locationMarker.x + (diagHorizontal * hexesMoved);
+                    pY = lY = locationMarker.y + (diagVertical * hexesMoved);
+                    break;
+
+                case 'North':
+                    pX = lX = locationMarker.x;
+                    pY = lY = locationMarker.y - (vertical * hexesMoved);
+                    break;
+
+                case 'Northwest':
+                    pX = lX = locationMarker.x - (diagHorizontal * hexesMoved);
+                    pY = lY = locationMarker.y - (diagVertical * hexesMoved);
+                    break;
+
+                case 'Northeast':
+                    pX = lX = locationMarker.x + (diagHorizontal * hexesMoved);
+                    pY = lY = locationMarker.y - (diagVertical * hexesMoved);
+                    break;
+
+                case 'East':
+                    pX = lX = locationMarker.x + (horizontal * hexesMoved);
+                    pY = lY = locationMarker.y;
+                    break;
+
+                case 'West':
+                    pX = lX = locationMarker.x - (horizontal * hexesMoved);
+                    pY = lY = locationMarker.y;
+                    break;
+
+                default:
+                    break;
+            }
         }
     }
+
+    if (playerMarker) {
+        updates.push({
+            _id: playerMarker._id,
+            x: pX,
+            y: pY
+        });
+    }
+
+    if (locationMarker) {
+        updates.push({
+            _id: locationMarker._id,
+            x: lX,
+            y: lY
+        });
+    }
+
+    if (updates.length > 0) {
+        currentScene.updateEmbeddedEntity("Token", updates);
+    }
+
+    msgContent += '<strong>Morning Encounter:</strong> ';
+
+    if (new Roll(`1d20`).roll().total > 15) {
+        encounter = encounterTable.roll().results[0].text;
+        msgContent += encounter;
+        msgContent += '<br/><br/><strong>Afternoon Encounter:</strong> ';
+    } else {
+        msgContent += 'None.<br/><br/><strong>Afternoon Encounter:</strong> ';
+    }
+
+    if (new Roll(`1d20`).roll().total > 15) {
+        encounter = encounterTable.roll().results[0].text;
+        msgContent += encounter;
+        msgContent += '<br/><br/><strong>Evening Encounter:</strong> ';
+    } else {
+        msgContent += 'None.<br/><br/><strong>Evening Encounter:</strong> ';
+    }
+
+    if (new Roll(`1d20`).roll().total > 15) {
+        encounter = encounterTable.roll().results[0].text;
+        msgContent += encounter;
+    } else {
+        msgContent += 'None.';
+    }
+
+    if (game.settings.get("Hex-Assist", "journal")) {
+        let journal = game.journal.entities.find(j => j.data.name === "Encounters");
+        if (journal) {
+            journal.update({
+                content: msgContent
+            })
+        } else {
+            JournalEntry.create({
+                name: "Encounters",
+                content: msgContent
+            });
+            journal = game.journal.entities.find(j => j.data.name === "Encounters");
+        }
+        journal.show();
+    } else {
+        let chatData = {
+            content: msgContent,
+            whisper: game.users.entities.filter(u => u.isGM).map(u => u._id)
+        };
+        ChatMessage.create(chatData, {});
+    }
+
+    if (game.modules.get("calendar-weather") && game.settings.get("Hex-Assist", "day")) {
+        game.Gametime.advanceTime({
+            days: 1
+        })
+    }
+}
+
+const pickTravelSpeed = html => {
+    let hexType = html.find('[name="hex-type"]')[0].value;
+    let travelType = html.find('[name="travel-type"]')[0].value;
+    let playerDirection = html.find('[name="travel-direction"]')[0].value;
+    let buttons;
+
+    if (travelType === travelTypes.ship) {
+        buttons = {
+            slow: {
+                icon: "<i class='fas fa-anchor'></i>",
+                label: `Close Hauled`,
+                callback: () => pace = 'slow'
+            },
+            average: {
+                icon: "<i class='fas fa-ship'></i>",
+                label: `Beam Reach`,
+                callback: () => pace = 'average'
+            },
+            fast: {
+                icon: "<i class='fas fa-wind'></i>",
+                label: `Running`,
+                callback: () => pace = 'fast'
+            }
+        };
+    } else {
+        buttons = {
+            slow: {
+                icon: "<i class='fas fa-user-ninja'></i>",
+                label: `Slow Pace`,
+                callback: () => pace = 'slow'
+            },
+            average: {
+                icon: "<i class='fas fa-hiking'></i>",
+                label: `Average Pace`,
+                callback: () => pace = 'average'
+            },
+            fast: {
+                icon: "<i class='fas fa-running'></i>",
+                label: `Fast Pace`,
+                callback: () => pace = 'fast'
+            }
+        };
+    }
+
+    new Dialog({
+        title: `Hex Crawl Helper`,
+        content: `<label>Pick a Travel Speed</label>`,
+        buttons: buttons,
+        default: "average",
+        close: html => travel(hexType, travelType, playerDirection, html),
+    }).render(true);
+}
+
+
+
+new Dialog({
+    title: `Hex Crawl Helper`,
+    content: formContent,
+    buttons: {
+        next: {
+            icon: "<i class='fas fa-arrow-right'></i>",
+            label: `Next`
+        },
+    },
+    default: "average",
+    close: html => pickTravelSpeed(html),
 }).render(true);
